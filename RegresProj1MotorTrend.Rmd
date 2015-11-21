@@ -51,7 +51,7 @@ bestFitCoeffBounds <- data.frame(lowerBound=bestFitCoeffLB, upperBound=bestFitCo
 bestFitCoeffBounds
 ```
 
-Residual Plot of the Best Fit Model
+Residual Plots of the Best Fit Model
 -------------------------------
 
 ```{r bestModelResid, cache=TRUE}
