@@ -7,24 +7,21 @@ output: pdf_document
 
 Executive Summary
 ===================
+The Motor Trend Car Road Tests Data was used to determined that automatic transmission cars are not worse than manual transmission cars in terms of fuel economy.  It was deteremined that only the *number of cylinders*, and  *weight* are significant determinants of a car's *fuel economy*.  Forcing *transmission type* into a model doesn't improve the *fuel economy* prediction power of the model.  The MPG Difference between an automatic car and a manual car is therefore not quantifiable.
 
-Motor Trend Road Car Road Tests Data was used to determined that automatic transmission cars are not worse than manual transmission cars in terms of fuel economy.  It was deteremined that only the *number of cylinders*, and  *weight* are significant determinants of a car's *fuel economy*.  Forcing *transmission type* into a model doesn't improve the *fuel economy* prediction power of the model; and just using *transmission type* alone to model *fuel economy* is inadequate.  The MPG Difference between an automatic car and a manual car is therefore not quantifiable.
-
-
-Exploratory Data Analysis: Fitting a Good Model
+Fitting a Good Model
 ===================
-
-We fit a linear model that encompasses all the variable, then use anova to filter out those variables that are not useful.  To contrast the result, we will later on try to force *transmission type* into our model, and try to use just *transmission type* to model *fuel economy*.
-```{r findModels, cache=TRUE}
+We fit a linear model that encompasses all the variable, then use an ANOVA table to filter out those variables that are not useful.  To contrast the result, we will later on try to force *transmission type* into our model.  
+The following ANOVA table shows that only the *number of cylinders*(cyl), and the *weight*(wt) are significant predictors for the cars' MPG at a two-sided 95% confidence level using the dataset. *Displacement*(disp) fails the two-sided 95% confidence level test by a small margin.
+```{r findModels, cache=TRUE, echo=FALSE}
 cars <- mtcars
 cars$am <- factor(cars$am)
 cars$vs <- factor(cars$vs)
 carAllFit <- lm(mpg ~ ., data=cars)
 anova(carAllFit)
 ```
-From the data, it looks like only the *number of cylinders*(cyl), and the *weight*(wt) are significant predictors for the cars' MPG at a two-sided 95% confidence level using the dataset. *Displacement*(disp) fails the two-sided 95% confidence level test by a small margin.
 
-Therefore the best model balancing between bias and over-modeling is:
+Therefore, the best model balancing between bias and over-modeling is:
 
 `mpg = B0 + B1*cyl + B2*wt` 
 
@@ -32,64 +29,81 @@ Note that the *transmission type*(am) is not a factor of the model.
 
 Best Fit Model Coefficients
 ------------------
-
-```{r bestModelCoeff, cache=TRUE}
+```{r bestModelCoeff, cache=TRUE, echo=FALSE}
 carBestFit <- lm(mpg ~ cyl + wt, data=cars)
 bestFitCoeff <- summary(carBestFit)$coefficients
 row.names( bestFitCoeff ) <- c("B0", "B1", "B2")
 bestFitCoeffEst <- bestFitCoeff[,1]
 bestFitCoeffEst
 ```
-Therefore, the average *fuel economy*(mpg) of the cars is `r bestFitCoeffEst[1]`; and for each unit increase in *number of cylinder*(cyl), a change of `r bestFitCoeffEst[2]` mpg of *fuel economy*(mpg) is expected; and for each 1000 lbs increase in *weight*(wt), a change of `r bestFitCoeffEst[3]` mpg of *fuel economy*(mpg) is expected.    
+The above are the estimated coefficients.  Hence, the average *fuel economy*(mpg) of the cars is `r bestFitCoeffEst[1]` mpg; and for each unit increase in *number of cylinder*(cyl), a change of `r bestFitCoeffEst[2]` mpg of *fuel economy*(mpg) is expected; and for each 1000 lbs increase in *weight*(wt), a change of `r bestFitCoeffEst[3]` mpg of *fuel economy*(mpg) is expected.    
 
-The 95% confidence intervals for the parameters can be calculated with the following code:
-```{r bestModelInt, cache=TRUE}
+Uncertainties in the Coefficients
+---------------------------
+The 95% confidence intervals for the coefficients are calculated as the following:
+```{r bestModelInt, cache=TRUE, echo=FALSE}
 bestFitCoeffConInt <- qt(.975, df = carBestFit$df)* bestFitCoeff[,2]
 bestFitCoeffLB <- bestFitCoeffEst - bestFitCoeffConInt
 bestFitCoeffUB <- bestFitCoeffEst + bestFitCoeffConInt
 bestFitCoeffBounds <- data.frame(lowerBound=bestFitCoeffLB, upperBound=bestFitCoeffUB)
 bestFitCoeffBounds
 ```
+Note that none of intervals contain 0; therefore, this is an acceptance model.  Residual plots are also available in the appendix.  The plots show that the residuals are normal and random.  These two facts give us confidnece to this best fit model.
 
-Residual Plots of the Best Fit Model
--------------------------------
+Forcing Transmission Type As a Predictor
+========================================
+The *Transmission type*(am) is added to the best fit model to investigate further if *transmission type* can affect *fuel economy*.  The following ANOVA table compares the two models.
+```{r cylWtAmFit, cache=TRUE, echo=FALSE}
+cylWtAmFit <- lm(mpg ~ cyl + wt + am, data=cars)
+anova(carBestFit, cylWtAmFit)
+```
+Note that the p value for the new model is huge(0.89) compared to our threshold of 0.025 for a 95% confidence level.  This highly suggests that the additional variable is not necessary.  The 95% confidence interval for the slope coefficient of *transmission type* follows: 
+```{r cylWtAmFitCoeff, cache=TRUE, echo=FALSE}
+cylWtAmFitCoeff <- summary(cylWtAmFit)$coefficients
+amCoeffBounds <- cylWtAmFitCoeff[4,1]+ c(-1, 1) * qt(.975, df = cylWtAmFit$df)*
+    cylWtAmFitCoeff[4,2]
+amCoeffBounds
+```
+Note that the interval contains 0, therefore further disproving the possibility that *transmission type* being a good predictor for a car's *fuel economy*(mpg).
 
-```{r bestModelResid, cache=TRUE}
+Conclusion
+========================================
+Using an ANOVA table, it was deteremined that only the *number of cylinders*, and  *weight* are significant determinants of a car's *fuel economy*, not *transmission type*.  Forcing *transmission type* into a model doesn't improve the *fuel economy* prediction power of the model.  Therefore, we can conclude that automatic transmission cars are not statistically different from manual transmission cars in terms of *fuel economy*.  The MPG Difference between an automatic car and a manual car is therefore not quantifiable.
+
+Appendix: Residual Plots of the Best Fit Model
+=====================================
+```{r bestModelResid, cache=TRUE, echo= FALSE}
 par(mfrow = c(2, 2))
 plot(carBestFit)
 ```
 The residual plots look normal, and there doesn't seem to be a pattern in the residual; therefore the best fit model is an acceptable model.
 
 
+Appendix: Code used
+======================================
+Fitting a Good Model
+--------------------
+```{r findModelsCode, ref.label='findModels', cache=TRUE, echo=TRUE, eval=FALSE}
+```
+
+Best Fit Model Coefficients
+------------------
+```{r bestModelCoeffCode, ref.label='bestModelCoeff', cache=TRUE, echo=TRUE, eval=FALSE}
+```
+
+Uncertainties in the Coefficients
+--------------------
+```{r bestModelIntCode, ref.label='bestModelInt', cache=TRUE, echo=TRUE, eval=FALSE}
+```
+
 Forcing Transmission Type As a Predictor
-========================================
-
-*Transmission type*(am) is added to the best fit model to investigate further if *transmission type* can affect *fuel economy*.
-```{r cylWtAmFit, cache=TRUE}
-cylWtAmFit <- lm(mpg ~ cyl + wt + am, data=cars)
-anova(carBestFit, cylWtAmFit)
+--------------------
+```{r cylWtAmFitCode, ref.label='cylWtAmFit', cache=TRUE, echo=TRUE, eval=FALSE}
 ```
-Note that the p value is huge(0.89) compared to our threshold of 0.025 for a 95% confidence level.  The 95% confidence interval for the slope of *transmission type* is given by the following
-```{r cylWtAmFitCoeff, cache=TRUE}
-cylWtAmFitCoeff <- summary(cylWtAmFit)$coefficients
-amCoeffBounds <- cylWtAmFitCoeff[4,1]+ c(-1, 1) * qt(.975, df = cylWtAmFit$df)* cylWtAmFitCoeff[4,2]
-amCoeffBounds
+```{r cylWtAmFitCoeffCode, ref.label='cylWtAmFitCoeff', cache=TRUE, echo=TRUE, eval=FALSE}
 ```
-Note that the interval includes 0, therefore further confirming that the *transmission type* is not a good predictor for a car's *fuel economy*(mpg).
 
-Using Transmission Type As The Sole Predictor
-========================================
-
-The following code calculates the R-squared of just using *transmission type* to model *fuel economy*
-```{r amFit, cache=TRUE}
-amFit <- lm(mpg ~ am, data=cars)
-amFitRS <- summary(amFit)$r.squared
-amFitRS
+Residual Plots of the Best Fit Model
+--------------------
+```{r bestModelResidCode, ref.label='bestModelResid', cache=TRUE, echo=TRUE, eval=FALSE}
 ```
-Note that the R-squared is only `r amFitRS`, so the model can't even account for half the variations of the *fuel economy*. In contrast, R-squared for the best fit model is `r summary(carBestFit)$r.squared`.  Using *transmission type* alone is inadequate.  
-
-Conclusion
-========================================
-
-Using ANOVA, it was deteremined that only the *number of cylinders*, and  *weight* are significant determinants of a car's *fuel economy*, not *transmission type*.  Forcing *transmission type* into a model doesn't improve the *fuel economy* prediction power of the model; and just using *transmission type* alone to model *fuel economy* is inadequate.  Therefore, we can conclude that automatic transmission cars are not statistically different from manual transmission cars in terms of *fuel economy*.
-
